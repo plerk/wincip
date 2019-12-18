@@ -1,0 +1,103 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+
+COPY rc/bin c:/bin
+ENV PERL_CPANM_HOME c:\\tmp\\cpanm
+RUN setx path "%PATH%;c:\bin"
+RUN mkdir \dzil \cache \work \opt \tmp
+
+##
+## INSTALL Dist::Zilla
+##
+
+
+RUN cd \dzil && \
+    curl -s -O http://strawberryperl.com/download/[% dzil_perl_version%]/strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    tar xf strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    del strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    c:\dzil\perl\bin\perl relocation.pl.bat --quiet && \
+    echo done
+
+RUN dzil-wrapper cpanm -n App::pwhich
+RUN dzil-wrapper cpanm -n Dist::Zilla
+RUN dzil-wrapper cpanm -n Dist::Zilla::PluginBundle::Author::Plicease
+
+
+[% IF mingw_get_version %]
+##
+## INSTALL MSYS
+##
+RUN mkdir \opt\msys
+RUN cd \opt\msys && \
+    curl -s -O -L https://sourceforge.net/projects/mingw/files/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-[% mingw_get_version %]-bin.zip && \
+    tar xf mingw-get-[% mingw_get_version %]-bin.zip && \
+    c:\opt\msys\bin\mingw-get install msys && \
+    c:\opt\msys\bin\mingw-get install msys-m4 && \
+    c:\opt\msys\bin\mingw-get install msys-perl && \
+    rmdir /s/q var\cache\mingw-get\packages && \
+    rmdir /s/q msys\1.0\share\doc && \
+    rmdir /s/q msys\1.0\share\man && \
+    del mingw-get-[% mingw_get_version %]-bin.zip
+ENV PERL_ALIEN_MSYS_BIN c:\\opt\\msys\\msys\\1.0\\bin
+[% END %]
+
+
+[% IF cmake_version %]
+##
+## INSTALL cmake
+## 
+RUN cd \opt && \
+    curl -s -O -L https://github.com/Kitware/CMake/releases/download/v[% cmake_version %]/cmake-[% cmake_version %]-win64-x64.zip && \
+    tar xf cmake-[% cmake_version %]-win64-x64.zip  && \
+    move cmake-[% cmake_version %]-win64-x64 cmake && \
+    setx path "%PATH%;c:\opt\cmake\bin"
+[% END %]
+
+
+[% IF rust_arch %]
+##
+## INSTALL rust
+##
+ENV CARGO_HOME=c:\\opt\\rust\\cargo
+ENV RUSTUP_HOME=c:\\opt\\rust\\rustup
+RUN setx path "%PATH%;c:\opt\rust\cargo\bin" && \
+    cd \tmp && \
+    curl -s -o rustup-init.exe https://win.rustup.rs/x86_64 && \
+    rustup-init -q -y --no-modify-path --default-host [% rust_arch %] && \
+    del rustup-init.exe
+[% END %]
+
+
+[% IF go_version AND go_arch %]
+##
+## INSTALL Go
+##
+RUN setx gopath "%USERPROFILE%\go" && \
+    setx path "%PATH%;%USERPROFILE%\go\bin;c:\opt\go\bin" && \
+    cd \opt && \
+    curl -s -O https://dl.google.com/go/go[% go_version %].windows-[% go_arch %].zip && \
+    tar xf go[% go_version %].windows-[% go_arch %].zip && \
+    del go[% go_version %].windows-[% go_arch %].zip
+[% END %]
+
+
+[% IF strawberry_version AND strawberry_arch %]
+##
+## INSTALL Strawberry Perl
+##
+RUN mkdir \perl && \
+    cd \perl && \
+    curl -s -O http://strawberryperl.com/download/[% strawberry_version %]/strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    tar xf strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    del strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    c:\perl\perl\bin\perl relocation.pl.bat --quiet && \
+    echo done
+
+RUN setx path "c:\cache\perl\bin;c:\perl\perl\site\bin;c:\perl\perl\bin;c:\perl\c\bin;%PATH%"
+ENV PERL5LIB c:/cache/perl/lib/perl5
+ENV PERL_LOCAL_LIB_ROOT c:/cache/perl/lib/perl5
+ENV PERL_MB_OPT --install_base c:/cache/perl
+ENV PERL_MM_OPT INSTALL_BASE=c:/cache/perl
+ENV MAKE [% make %]
+[% END %]
+
+WORKDIR c:/work
