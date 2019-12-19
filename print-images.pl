@@ -12,11 +12,13 @@ my($out,$err) = capture {
 my @images = map { JSON::PP->new->decode($_) } split /\n/, $out;
 
 my %images;
+my %size;
 
 foreach my $image (@images)
 {
   next unless $image->{Repository} eq 'plicease/wincip';
   next unless $image->{Tag} ne '<none>';
+  $size{$image->{ID}} = $image->{Size};
   if($image->{Tag} =~ /^(5\.[0-9]+)/)
   {
     push @{ $images{$1}->{$image->{ID}} }, $image->{Tag};
@@ -33,6 +35,7 @@ foreach my $major (sort keys %images)
 {
   foreach my $id (keys %{ $images{$major} })
   {
+    my $size = $size{$id};
     my @tags = @{ $images{$major}->{$id} };
     my($full) = sort { length $b <=> length $a } @tags;
     my %tags = map { $_ => 1 } @tags;
@@ -41,6 +44,7 @@ foreach my $major (sort keys %images)
     push @table, [
       $major,
       $id,
+      $size,
       $full,
       join(', ', @tags),
     ];
