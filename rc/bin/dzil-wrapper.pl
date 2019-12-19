@@ -21,6 +21,7 @@ unshift @PATH, 'c:\\dzil\\perl\\site\\bin',
 
 if(defined $ENV{PERL_MB_OPT} || defined $ENV{PERL_MM_OPT})
 {
+  unshift @PATH, 'c:\\cache\\dzil\\bin';
   $ENV{PERL5LIB}            = 'c:/cache/dzil/lib/perl5';
   $ENV{PERL_LOCAL_LIB_ROOT} = 'c:/cache/dzil';
   $ENV{PERL_MB_OPT}         = '--install_base c:/cache/dzil';
@@ -34,6 +35,9 @@ die "no $program found" unless defined $exe;
 
 say "+$exe @ARGV";
 system $exe, @ARGV;
-die if $?;
+if($? == -1)
+{ die "system failed $!" }
+elsif($?)
+{ die "command failed" }
 
 system 'rmdir /s/q c:\\tmp\\cpanm';

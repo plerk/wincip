@@ -6,7 +6,8 @@ use Path::Tiny qw( path );
 use JSON::PP ();
 
 our %vars = (
-  mingw_get_version => '0.6.2-mingw32-beta-20131004-1',
+  mingw_get_version1 => '0.6.2-beta-20131004-1',
+  mingw_get_version2 => '0.6.2-mingw32-beta-20131004-1',
   cmake_version     => '3.16.1',
   go_version        => '1.13.2',
   dzil_perl_version => '5.30.1.1',
@@ -19,13 +20,18 @@ my $tmpl = path('rc/Dockerfile.tt')->slurp_utf8;
 
 sub generate
 {
-  my($dockerfile, $vars, %meta) = @_;
+  my $dockerfile = shift;
+  my %vars = %{ shift() };
+  my %meta = @_;
   
   say $dockerfile;
   $dockerfile->parent->mkpath;
+
+  $vars{ciname} = $dockerfile->parent->basename;
+
   $tt->process('rc/Dockerfile.tt', \%vars, "$dockerfile") or die $tt->error;
   
-  %meta = ( %$vars, %meta );
+  %meta = ( %vars, , %meta );
   
   my $json_file = $dockerfile->parent->child('meta.json');
   $json_file->spew_raw(JSON::PP->new->indent(1)->encode(\%meta));
@@ -103,6 +109,19 @@ foreach my $tag (qw( default ))
           my $dockerfile = path('versions')->child($tags[0])->child('Dockerfile');
           generate( $dockerfile, \%vars, tags => \@tags );
         }
+
+        #{
+        #  local %vars = (
+        #    %vars,
+        #    from => 'mcr.microsoft.com/windows/nanoserver:1909',
+        #    user => 'Administrator',
+        #  );
+        #  delete $vars{rust_version};
+        #  delete $vars{go_version};
+        #  local @tags = map { "$_-nano" } @tags;
+        #  my $dockerfile = path('versions')->child($tags[0])->child('Dockerfile');
+        #  generate( $dockerfile, \%vars, tags => \@tags );
+        #}
       }
 
       delete $vars{rust_version};

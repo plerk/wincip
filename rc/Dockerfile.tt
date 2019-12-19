@@ -1,43 +1,28 @@
-FROM mcr.microsoft.com/windows/servercore:ltsc2019
+FROM [% IF from %][% from %][% ELSE %]mcr.microsoft.com/windows/servercore:ltsc2019[% END %]
 
-COPY rc/bin c:/bin
+[% IF user %]
+USER [% user %]
+[% END %]
+
 ENV PERL_CPANM_HOME c:\\tmp\\cpanm
 RUN setx path "%PATH%;c:\bin"
-RUN mkdir \dzil \cache \work \opt \tmp
+RUN mkdir \cache \work \opt \tmp
 
-##
-## INSTALL Dist::Zilla
-##
-
-
-RUN cd \dzil && \
-    curl -s -O http://strawberryperl.com/download/[% dzil_perl_version%]/strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
-    tar xf strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
-    del strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
-    c:\dzil\perl\bin\perl relocation.pl.bat --quiet && \
-    echo done
-
-RUN dzil-wrapper cpanm -n App::pwhich
-RUN dzil-wrapper cpanm -n Dist::Zilla
-RUN dzil-wrapper cpanm -n Dist::Zilla::PluginBundle::Author::Plicease
-RUN dzil-wrapper cpanm -n App::af
-
-
-[% IF mingw_get_version %]
+[% IF mingw_get_version1 AND mingw_get_version2 %]
 ##
 ## INSTALL MSYS
 ##
-RUN mkdir \opt\msys
-RUN cd \opt\msys && \
-    curl -s -O -L https://sourceforge.net/projects/mingw/files/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-[% mingw_get_version %]-bin.zip && \
-    tar xf mingw-get-[% mingw_get_version %]-bin.zip && \
+RUN mkdir \opt\msys && \
+    cd \opt\msys && \
+    curl -s -o mingw-get-bin.zip -L https://sourceforge.net/projects/mingw/files/Installer/mingw-get/mingw-get-[% mingw_get_version1 %]/mingw-get-[% mingw_get_version2 %]-bin.zip/download && \
+    tar xf mingw-get-bin.zip && \
     c:\opt\msys\bin\mingw-get install msys && \
     c:\opt\msys\bin\mingw-get install msys-m4 && \
     c:\opt\msys\bin\mingw-get install msys-perl && \
     rmdir /s/q var\cache\mingw-get\packages && \
     rmdir /s/q msys\1.0\share\doc && \
     rmdir /s/q msys\1.0\share\man && \
-    del mingw-get-[% mingw_get_version %]-bin.zip
+    del mingw-get-bin.zip
 ENV PERL_ALIEN_MSYS_BIN c:\\opt\\msys\\msys\\1.0\\bin
 [% END %]
 
@@ -52,6 +37,27 @@ RUN cd \opt && \
     move cmake-[% cmake_version %]-win64-x64 cmake && \
     setx path "%PATH%;c:\opt\cmake\bin"
 [% END %]
+
+
+##
+## INSTALL Dist::Zilla
+##
+
+
+RUN mkdir \dzil && \
+    cd \dzil && \
+    curl -s -O http://strawberryperl.com/download/[% dzil_perl_version%]/strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    tar xf strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    del strawberry-perl-[% dzil_perl_version%]-64bit.zip && \
+    c:\dzil\perl\bin\perl relocation.pl.bat --quiet && \
+    echo done
+
+COPY rc/bin/dzil-wrapper.pl c:/dzil-wrapper.pl
+RUN c:\dzil\perl\bin\perl dzil-wrapper.pl cpanm -n App::pwhich
+RUN c:\dzil\perl\bin\perl dzil-wrapper.pl cpanm -n Dist::Zilla
+RUN c:\dzil\perl\bin\perl dzil-wrapper.pl cpanm -n Dist::Zilla::PluginBundle::Author::Plicease
+RUN c:\dzil\perl\bin\perl dzil-wrapper.pl cpanm -n App::af
+RUN del dzil-wrapper.pl
 
 
 [% IF strawberry_version AND strawberry_arch %]
@@ -71,7 +77,9 @@ ENV PERL5LIB c:/cache/perl/lib/perl5
 ENV PERL_LOCAL_LIB_ROOT c:/cache/perl/lib/perl5
 ENV PERL_MB_OPT --install_base c:/cache/perl
 ENV PERL_MM_OPT INSTALL_BASE=c:/cache/perl
-ENV MAKE [% make %]
+
+ENV CIPDIST strawberry
+
 [% END %]
 
 
@@ -101,5 +109,10 @@ RUN setx gopath "%USERPROFILE%\go" && \
     del go[% go_version %].windows-[% go_arch %].zip
 [% END %]
 
+ENV CI true
+ENV CIPSOMETHING true
+ENV CONTINUOUS_INTEGRATION true
+ENV CINAME [% ciname %]
 
+COPY rc/bin c:/bin
 WORKDIR c:/work
