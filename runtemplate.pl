@@ -59,19 +59,8 @@ foreach my $tag (qw( default ))
         strawberry_version => $strawberry_version,
         strawberry_arch    => $strawberry_arch,
       );
-    
-      if($strawberry_version eq $current_strawberry_version)
-      {
-        $vars{rust_arch} = $strawberry_arch eq '32bit' ? 'i686-pc-windows-gnu' : 'x86_64-pc-windows-gnu';
-        $vars{go_arch}   = $strawberry_arch eq '32bit' ? '386' : 'amd64';
-      }
-      else
-      {
-        delete $vars{rust_version};
-        delete $vars{go_version};
-      }
 
-      my @tags;
+      our @tags = ();
 
       {
         my @versions = split /\./, $strawberry_version;
@@ -90,6 +79,34 @@ foreach my $tag (qw( default ))
       }
     
       @tags = sort { length $b <=> length $a || $a cmp $b } @tags;
+
+      if($strawberry_version eq $current_strawberry_version)
+      {
+        {
+          local %vars = (
+            %vars,
+            rust_arch => $strawberry_arch eq '32bit' ? 'i686-pc-windows-gnu' : 'x86_64-pc-windows-gnu',
+          );
+          delete $vars{go_version};
+          local @tags = map { "$_-rust"} @tags;
+          my $dockerfile = path('versions')->child($tags[0])->child('Dockerfile');
+          generate( $dockerfile, \%vars, tags => \@tags );
+        }
+        
+        {
+          local %vars = (
+            %vars,
+            go_arch => $strawberry_arch eq '32bit' ? '386' : 'amd64',
+          );
+          delete $vars{rust_version};
+          local @tags = map { "$_-go"} @tags;
+          my $dockerfile = path('versions')->child($tags[0])->child('Dockerfile');
+          generate( $dockerfile, \%vars, tags => \@tags );
+        }
+      }
+
+      delete $vars{rust_version};
+      delete $vars{go_version};
 
       my $dockerfile = path('versions')->child($tags[0])->child('Dockerfile');
       generate( $dockerfile, \%vars, tags => \@tags );

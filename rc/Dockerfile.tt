@@ -20,6 +20,7 @@ RUN cd \dzil && \
 RUN dzil-wrapper cpanm -n App::pwhich
 RUN dzil-wrapper cpanm -n Dist::Zilla
 RUN dzil-wrapper cpanm -n Dist::Zilla::PluginBundle::Author::Plicease
+RUN dzil-wrapper cpanm -n App::af
 
 
 [% IF mingw_get_version %]
@@ -53,6 +54,27 @@ RUN cd \opt && \
 [% END %]
 
 
+[% IF strawberry_version AND strawberry_arch %]
+##
+## INSTALL Strawberry Perl
+##
+RUN mkdir \perl && \
+    cd \perl && \
+    curl -s -O http://strawberryperl.com/download/[% strawberry_version %]/strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    tar xf strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    del strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
+    c:\perl\perl\bin\perl relocation.pl.bat --quiet && \
+    echo done
+
+RUN setx path "c:\cache\perl\bin;c:\perl\perl\site\bin;c:\perl\perl\bin;c:\perl\c\bin;%PATH%"
+ENV PERL5LIB c:/cache/perl/lib/perl5
+ENV PERL_LOCAL_LIB_ROOT c:/cache/perl/lib/perl5
+ENV PERL_MB_OPT --install_base c:/cache/perl
+ENV PERL_MM_OPT INSTALL_BASE=c:/cache/perl
+ENV MAKE [% make %]
+[% END %]
+
+
 [% IF rust_arch %]
 ##
 ## INSTALL rust
@@ -79,25 +101,5 @@ RUN setx gopath "%USERPROFILE%\go" && \
     del go[% go_version %].windows-[% go_arch %].zip
 [% END %]
 
-
-[% IF strawberry_version AND strawberry_arch %]
-##
-## INSTALL Strawberry Perl
-##
-RUN mkdir \perl && \
-    cd \perl && \
-    curl -s -O http://strawberryperl.com/download/[% strawberry_version %]/strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
-    tar xf strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
-    del strawberry-perl-[% strawberry_version %]-[% strawberry_arch %].zip && \
-    c:\perl\perl\bin\perl relocation.pl.bat --quiet && \
-    echo done
-
-RUN setx path "c:\cache\perl\bin;c:\perl\perl\site\bin;c:\perl\perl\bin;c:\perl\c\bin;%PATH%"
-ENV PERL5LIB c:/cache/perl/lib/perl5
-ENV PERL_LOCAL_LIB_ROOT c:/cache/perl/lib/perl5
-ENV PERL_MB_OPT --install_base c:/cache/perl
-ENV PERL_MM_OPT INSTALL_BASE=c:/cache/perl
-ENV MAKE [% make %]
-[% END %]
 
 WORKDIR c:/work

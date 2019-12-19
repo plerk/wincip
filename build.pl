@@ -5,7 +5,11 @@ use JSON::PP ();
 use File::Glob qw( bsd_glob );
 use Path::Tiny qw( path );
 
-foreach my $dockerfile ( sort map { path($_) } bsd_glob 'versions/*/Dockerfile' )
+my @dockerfile_list = scalar(@ARGV)
+  ? @ARGV
+  : bsd_glob 'versions/*/Dockerfile';
+
+foreach my $dockerfile ( sort map { path($_) } @dockerfile_list )
 {
   say $dockerfile;
   my $meta = JSON::PP->new->decode($dockerfile->parent->child('meta.json')->slurp_raw);
